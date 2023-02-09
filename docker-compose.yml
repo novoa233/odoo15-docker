@@ -1,0 +1,74 @@
+version: '3.8'
+services:
+
+#odoo 16
+  web:
+    image: odoo:15
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./config:/etc/odoo
+      - ./addons:/mnt/extra-addons
+    environment:
+      - PASSWORD_FILE=/run/secrets/postgresql_password
+    secrets:
+      - postgresql_password
+    networks:
+      project_net:
+        aliases:
+          - odoo15_net
+
+#postgres 15
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgresql_password
+      - POSTGRES_USER=odoo
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data/pgdata
+    secrets:
+      - postgresql_password
+    networks:
+      project_net:
+        aliases:
+          - postgres_net
+
+#pgadmin4
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "void@admin.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    ports:
+      - 3001:80
+    volumes:
+      - odoo-pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - web
+    networks:
+      project_net:
+        aliases:
+          - pgadmin_net
+
+volumes:
+  odoo-web-data: {}
+  odoo-db-data: {}
+  odoo-pgadmin-data: {}
+
+secrets:
+  postgresql_password:
+    file: odoo_pg_pass
+
+networks:
+  project_net:
+    name: void_net
+    driver: bridge
+    ipam:
+      driver: default
